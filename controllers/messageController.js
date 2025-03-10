@@ -1,4 +1,4 @@
-import Message from "../models/chatModel.js";
+import Message from "../models/messageModel.js";
 import errorHandler from "../utilities/errorHandler.js";
 
 const getChatHistory = async (req, res) => {
