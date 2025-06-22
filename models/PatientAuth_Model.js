@@ -16,7 +16,8 @@ const PatientSchema = mongoose.Schema({
     vaccinations: [String],
     bloodType: {
       type: String,
-      enum: ["AB+", "A+", "B+", "O+", "AB-", "A-", "B-", "O-"],
+      enum: ["AB+", "A+", "B+", "O+", "AB-", "A-", "B-", "O-", ""],
+      default: "",
     },
     familyHistory: {
       genatics: [String],
@@ -78,14 +79,16 @@ const PatientSchema = mongoose.Schema({
     birthDateOfFirstChild: String,
     smoking: {
       type:String,
-      enum:["Yes","No","Former smoker"],
+      enum:["Yes","No","Former smoker", ""],
+      default: "",
     },
     alcohol: String,
     wifesNumber: Number,
     petsTypes: [String],
     familyStatus: {
       type: String,
-      enum: ["Single", "Married", "Divorced", "Widowed"],
+      enum: ["Single", "Married", "Divorced", "Widowed", ""],
+      default: "",
     },
     Gender: { type: String, enum: ["Male", "Female"] },
   },

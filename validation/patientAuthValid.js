@@ -170,9 +170,8 @@ import User from "../models/PatientAuth_Model.js";
     //   .notEmpty()
     //   .withMessage("Vaccinations field cannot be empty"),
     body("bloodType")
-      .notEmpty()
-      .withMessage("Blood Type cannot be empty")
-      .isIn(["AB+", "A+", "B+", "O+", "AB-", "A-", "B-", "O-"])
+      .optional()
+      .isIn(["AB+", "A+", "B+", "O+", "AB-", "A-", "B-", "O-", ""])
       .withMessage("Invalid blood type"),
     // body("familyHistory.genatics")
     //   .isArray()
