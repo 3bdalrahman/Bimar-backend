@@ -568,6 +568,77 @@ const updateDoctorImage = async (req, res) => {
   }
 };
 
+// Get Doctor Details for Re-application
+const getDoctorDetailsForEdit = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const foundDoctor = await doctor.findById(id);
+
+    if (!foundDoctor) {
+      return res.status(404).json({
+        status: responseMsgs.FAIL,
+        data: ["Doctor not found"],
+      });
+    }
+
+    // This route is public, but we only return data if the doctor was rejected.
+    if (foundDoctor.status !== "rejected") {
+      return res.status(403).json({
+        status: responseMsgs.FAIL,
+        data: ["This application cannot be edited at this time."],
+      });
+    }
+
+    res.status(200).json({
+      status: responseMsgs.SUCCESS,
+      data: foundDoctor,
+    });
+  } catch (err) {
+    console.log("Error in getDoctorDetailsForEdit:", err);
+    errorHandler(res, err);
+  }
+};
+
+// Resubmit Doctor Application
+const resubmitDoctorApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body;
+
+    const foundDoctor = await doctor.findById(id);
+    if (!foundDoctor) {
+      return res.status(404).json({
+        status: responseMsgs.FAIL,
+        data: ["Doctor not found"],
+      });
+    }
+
+    // Ensure status cannot be manually changed by the payload
+    if (updatedData.status) {
+      delete updatedData.status;
+    }
+
+    const resubmittedDoctor = await doctor.findByIdAndUpdate(
+      id,
+      {
+        ...updatedData,
+        status: "pending", // Set status to pending for re-review
+        rejectionReason: null, // Clear previous rejection reason
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      status: responseMsgs.SUCCESS,
+      data: "Application resubmitted successfully. It will be reviewed by an admin shortly.",
+      doctor: resubmittedDoctor,
+    });
+  } catch (err) {
+    console.log("Error in resubmitDoctorApplication:", err);
+    errorHandler(res, err);
+  }
+};
+
 export default {
   register,
   login,
@@ -581,4 +652,6 @@ export default {
   updateClinic,
   getField,
   updateDoctorImage,
+  getDoctorDetailsForEdit,
+  resubmitDoctorApplication
 };

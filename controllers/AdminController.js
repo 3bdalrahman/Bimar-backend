@@ -256,18 +256,19 @@ const DoctorRejection = async (req, res) => {
     if (!decoded.isAdmin) throw "Unauthorized: Admin access required";
 
     const { id } = req.params;
+    const { rejectionReason } = req.body; // Get rejection reason from request body
 
-    // Update doctor status to rejected
+    // Update doctor status to rejected and add rejection reason
     const updatedDoctor = await Doctor.findByIdAndUpdate(
       id,
-      { status: "rejected" },
+      { status: "rejected", rejectionReason: rejectionReason },
       { new: true }
     );
 
     if (!updatedDoctor) {
       return res.status(404).json({
         status: responseMsgs.FAIL,
-        data: ["Doctor not found"]
+        data: ["Doctor not found"],
       });
     }
 
@@ -287,9 +288,19 @@ const DoctorRejection = async (req, res) => {
           <h1 style="background-color: #16423C; color: white; padding: 30px; text-align: center;">Account Status Update</h1>
           <div style="padding: 30px;">
             <h2>Dear Dr. ${updatedDoctor.doctorName},</h2>
-            <p>We regret to inform you that your Bimar account application has been rejected.</p>
-            <p>This decision was made after careful review of your submitted credentials and documents.</p>
-            <p>If you believe this is an error or would like to appeal this decision, please contact our support team.</p>
+            <p>We've reviewed your Bimar account application and it requires a few updates before we can proceed with activation.</p>
+            ${
+              rejectionReason
+                ? `<p><strong>Reason for rejection:</strong> ${rejectionReason}</p>`
+                : ""
+            }
+            <p>Please click the link below to update your application. After you resubmit, we will review it again promptly.</p>
+            <p style="text-align: center; margin: 20px 0;">
+              <a href="${
+                process.env.FRONTEND_URL
+              }/doctor-re-apply/${updatedDoctor._id}" style="background-color: #16423C; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Update Your Application</a>
+            </p>
+            <p>If you have any questions, please contact our support team.</p>
             <p>Best regards,</p>
             <p>The Bimar Team</p>
           </div>
@@ -328,9 +339,12 @@ const DoctorRejection = async (req, res) => {
         from: process.env.USER,
         to: updatedDoctor.doctorEmail,
         subject: "Bimar Account Status Update",
-        html: emailHtml
+        html: emailHtml,
       });
-      console.log("Rejection email sent successfully to:", updatedDoctor.doctorEmail);
+      console.log(
+        "Rejection email sent successfully to:",
+        updatedDoctor.doctorEmail
+      );
     } catch (emailError) {
       console.error("Failed to send rejection email:", emailError);
     }

@@ -24,4 +24,8 @@ router.post("/field", doctorController.getField);
 router.patch("/update-docorImage",uploadProfile.uploadDocProfile.single("doctorImage")
 ,doctorController.updateDoctorImage)
 
+// Public routes for doctors to edit their rejected applications
+router.get('/edit-details/:id', doctorController.getDoctorDetailsForEdit);
+router.put('/resubmit-application/:id', doctorController.resubmitDoctorApplication);
+
 export default router;
