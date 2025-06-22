@@ -20,6 +20,7 @@ router.delete("/doctorDelete", doctorController.deleteDoctor);
 router.delete("/deleteClinic", doctorController.deleteClinic);
 router.put("/updateDoctor", doctorController.updateDoctor);
 router.put("/updateClinic", doctorController.updateClinic);
+router.post("/addClinic", uploadProfile.uploadDocProfile.any(), doctorController.addClinic);
 router.post("/field", doctorController.getField);
 router.patch("/update-docorImage",uploadProfile.uploadDocProfile.single("doctorImage")
 ,doctorController.updateDoctorImage)

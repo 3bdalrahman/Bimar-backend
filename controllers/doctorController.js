@@ -638,6 +638,154 @@ const resubmitDoctorApplication = async (req, res) => {
     errorHandler(res, err);
   }
 };
+// Add Clinic Function
+const addClinic = async (req, res) => {
+  try {
+    console.log("addClinic function called");
+    console.log("Request body:", req.body);
+    console.log("Request files:", req.files);
+    
+    const token = req.cookies.jwt;
+    console.log("token:-", token);
+    
+    if (!token) {
+      return res.status(401).json({
+        status: responseMsgs.FAIL,
+        data: "No Token Provided"
+      });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_KEY);
+      console.log("Decoded token:", decoded);
+    } catch (jwtError) {
+      console.log("JWT verification error:", jwtError);
+      return res.status(401).json({
+        status: responseMsgs.FAIL,
+        data: "Invalid or expired token"
+      });
+    }
+
+    const Doctor = await doctor.findById(decoded.userId);
+    
+    if (!Doctor) {
+      return res.status(404).json({
+        status: responseMsgs.FAIL,
+        data: "Doctor not found"
+      });
+    }
+
+    // Check if the user is a doctor (not an admin)
+    if (decoded.isAdmin) {
+      return res.status(403).json({
+        status: responseMsgs.FAIL,
+        data: "Unauthorized: Only doctors can add clinics"
+      });
+    }
+
+    const clinicData = req.body;
+    console.log("Clinic data received:", clinicData);
+    
+    // Validate required fields based on the clinic schema
+    if (!clinicData.clinicCity || !clinicData.clinicArea || !clinicData.clinicAddress || 
+        !clinicData.clinicPhone || !clinicData.clinicEmail || !clinicData.clinicLocationLinks || 
+        !clinicData.Price || !clinicData.clinicWorkDays) {
+      return res.status(400).json({
+        status: responseMsgs.FAIL,
+        data: "Missing required fields: clinicCity, clinicArea, clinicAddress, clinicPhone, clinicEmail, clinicLocationLinks, Price, and clinicWorkDays are required"
+      });
+    }
+
+    // Validate clinicWorkDays structure
+    if (!Array.isArray(clinicData.clinicWorkDays) || clinicData.clinicWorkDays.length === 0) {
+      return res.status(400).json({
+        status: responseMsgs.FAIL,
+        data: "clinicWorkDays must be an array with at least one working day"
+      });
+    }
+
+    // Validate each working day
+    const validDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    for (const workDay of clinicData.clinicWorkDays) {
+      if (!workDay.day || !validDays.includes(workDay.day)) {
+        return res.status(400).json({
+          status: responseMsgs.FAIL,
+          data: `Invalid day: ${workDay.day}. Must be one of: ${validDays.join(", ")}`
+        });
+      }
+      if (!workDay.workingHours || !Array.isArray(workDay.workingHours) || workDay.workingHours.length === 0) {
+        return res.status(400).json({
+          status: responseMsgs.FAIL,
+          data: `Working hours are required for ${workDay.day}`
+        });
+      }
+      if (typeof workDay.NoBookings !== 'number' || workDay.NoBookings < 0) {
+        return res.status(400).json({
+          status: responseMsgs.FAIL,
+          data: `NoBookings must be a positive number for ${workDay.day}`
+        });
+      }
+    }
+
+    // Handle clinic license file upload
+    let clinicLicensePath = null;
+    if (req.files && req.files.length > 0) {
+      const clinicLicenseFile = req.files.find(file => file.fieldname === "clinicLicense");
+      if (clinicLicenseFile) {
+        clinicLicensePath = clinicLicenseFile.path;
+      }
+    }
+
+    // Ensure clinicPhone is an array
+    const clinicPhoneArray = Array.isArray(clinicData.clinicPhone) 
+      ? clinicData.clinicPhone 
+      : [clinicData.clinicPhone];
+
+    // Create new clinic object matching the schema
+    const newClinic = {
+      clinicName: clinicData.clinicName || Doctor.doctorName, // Use doctor name as default
+      clinicLicense: clinicLicensePath,
+      clinicCity: clinicData.clinicCity,
+      clinicArea: clinicData.clinicArea,
+      clinicAddress: clinicData.clinicAddress,
+      clinicPhone: clinicPhoneArray,
+      clinicEmail: clinicData.clinicEmail,
+      clinicWebsite: clinicData.clinicWebsite || "",
+      clinicWorkDays: clinicData.clinicWorkDays,
+      clinicLocationLinks: clinicData.clinicLocationLinks,
+      Price: clinicData.Price
+    };
+
+    console.log("New clinic object:", newClinic);
+
+    // Add the new clinic to the doctor's clinic array
+    const result = await doctor.updateOne(
+      { _id: decoded.userId },
+      { $push: { clinic: newClinic } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(500).json({
+        status: responseMsgs.FAIL,
+        data: "Failed to add clinic"
+      });
+    }
+
+    console.log("Clinic added successfully");
+    return res.status(200).json({
+      status: responseMsgs.SUCCESS,
+      data: "Clinic added successfully",
+      clinic: newClinic
+    });
+  } catch (err) {
+    console.log("Error in addClinic:", err);
+    return res.status(500).json({
+      status: responseMsgs.FAIL,
+      data: err.message || "Internal server error"
+    });
+  }
+};
 
 export default {
   register,
@@ -653,5 +801,6 @@ export default {
   getField,
   updateDoctorImage,
   getDoctorDetailsForEdit,
-  resubmitDoctorApplication
+  resubmitDoctorApplication,
+  addClinic,
 };

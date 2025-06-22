@@ -10,13 +10,16 @@ const getAnalytics = async (
   endDate = null,
   groupByMonth = false
 ) => {
-  const matchStage = { doctorId: new mongoose.Types.ObjectId(doctorId) };
+  const matchStage = { 
+    doctorId: new mongoose.Types.ObjectId(doctorId),
+    status: "Completed" // Only include completed appointments
+  };
   if (startDate && endDate) {
     matchStage.appointmentDate = { $gte: startDate, $lte: endDate };
   }
 
   const pipeline = [
-    { $match: matchStage }, // Match appointments for the doctor and date range
+    { $match: matchStage }, // Match appointments for the doctor, date range, and completed status
   ];
 
   // Group by month if required
@@ -25,7 +28,7 @@ const getAnalytics = async (
       $group: {
         _id: { $month: "$appointmentDate" }, // Group by month
         totalPatients: { $sum: 1 }, // Count total patients
-        totalMoney: { $sum: "$Price" }, // Sum the Price field from Appointments
+        totalMoney: { $sum: "$Price" }, // Sum the Price field from completed Appointments
       },
     });
     pipeline.push({ $sort: { _id: 1 } }); // Sort by month (1-12)
@@ -34,7 +37,7 @@ const getAnalytics = async (
       $group: {
         _id: null, // No grouping, aggregate all
         totalPatients: { $sum: 1 }, // Count total patients
-        totalMoney: { $sum: "$Price" }, // Sum the Price field from Appointments
+        totalMoney: { $sum: "$Price" }, // Sum the Price field from completed Appointments
       },
     });
   }
@@ -148,6 +151,7 @@ const getMonthlyAnalytics = async (req, res) => {
       firstDayOfMonth,
       lastDayOfMonth
     );
+    console.log(analytics);
     res.status(200).json(analytics);
   } catch (error) {
     console.log("Error in getMonthlyAnalytics:", error);
