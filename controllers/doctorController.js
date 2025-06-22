@@ -605,25 +605,40 @@ const resubmitDoctorApplication = async (req, res) => {
     const { id } = req.params;
     const updatedData = req.body;
 
-    const foundDoctor = await doctor.findById(id);
-    if (!foundDoctor) {
-      return res.status(404).json({
-        status: responseMsgs.FAIL,
-        data: ["Doctor not found"],
-      });
+    // Handle file uploads
+    if (req.files) {
+      // doctorImage
+      const doctorImageFile = req.files.find(f => f.fieldname === "doctorImage");
+      if (doctorImageFile) updatedData.doctorImage = doctorImageFile.path;
+
+      // syndicateCard
+      const syndicateCardFile = req.files.find(f => f.fieldname === "syndicateCard");
+      if (syndicateCardFile) updatedData.syndicateCard = syndicateCardFile.path;
+
+      // certificates (multiple)
+      const certificateFiles = req.files.filter(f => f.fieldname === "certificates");
+      if (certificateFiles.length > 0) {
+        updatedData.certificates = certificateFiles.map(f => f.path);
+      }
+
+      // clinicLicense (if you support updating clinics)
+      // If you use clinic[0][clinicLicense] as field name, handle accordingly
     }
 
-    // Ensure status cannot be manually changed by the payload
-    if (updatedData.status) {
-      delete updatedData.status;
-    }
+    // Ensure file fields are correct types
+    if (typeof updatedData.doctorImage === "object") updatedData.doctorImage = null;
+    if (typeof updatedData.syndicateCard === "object") updatedData.syndicateCard = null;
+    if (updatedData.certificates && !Array.isArray(updatedData.certificates)) updatedData.certificates = [];
+
+    // Prevent status override
+    if (updatedData.status) delete updatedData.status;
 
     const resubmittedDoctor = await doctor.findByIdAndUpdate(
       id,
       {
         ...updatedData,
-        status: "pending", // Set status to pending for re-review
-        rejectionReason: null, // Clear previous rejection reason
+        status: "pending",
+        rejectionReason: null,
       },
       { new: true }
     );
